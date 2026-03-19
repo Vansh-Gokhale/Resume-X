@@ -67,7 +67,7 @@ export default function Home() {
       formData.append("resume", file);
       formData.append("jd", jd);
 
-      const apiUrl = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL || "http://localhost:8000/api/optimize";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/optimize";
 
       const response = await fetch(apiUrl, {
         method: "POST",
