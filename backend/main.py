@@ -1,6 +1,8 @@
 import os
 import io
 import json
+import time
+import asyncio
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -13,10 +15,16 @@ load_dotenv()
 
 app = FastAPI(title="ResumeX API")
 
-# Configure CORS for local Next.js frontend
+# Configure CORS
+origins = [
+    "http://localhost:3000",
+    "http://localhost:3006",
+    os.getenv("FRONTEND_URL", ""),
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3006", "http://127.0.0.1:3006"],
+    allow_origins=[origin for origin in origins if origin],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -90,36 +98,74 @@ Output strictly in JSON format with exactly the following two keys:
 "cold_email": "The full text of the cold email"
 """
 
-    try:
-        # Call the Gemini model utilizing Structured JSON Output constraint
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-            ),
-        )
+    # Ordered list of models to try — if one is overloaded, fall through to the next
+    MODELS = [
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-2.0-flash-lite",
+        "gemini-flash-latest",
+    ]
+    MAX_RETRIES = 3          # retries per model
+    INITIAL_BACKOFF = 2      # seconds
 
-        response_text = response.text
+    last_error = None
 
-        # Validate we got exactly the JSON format we requested
-        result_data = json.loads(response_text)
-        
-        # Check keys
-        if "tailored_resume" not in result_data or "cold_email" not in result_data:
-            raise ValueError("Model response missing required keys.")
+    for model_name in MODELS:
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                print(f"[ResumeX] Trying model={model_name}, attempt {attempt}/{MAX_RETRIES}")
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                    ),
+                )
 
-        return {
-            "tailored_resume": result_data["tailored_resume"],
-            "cold_email": result_data["cold_email"]
-        }
+                response_text = response.text
 
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="Failed to parse JSON response from the model.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating content with Gemini: {str(e)}")
+                # Validate JSON
+                result_data = json.loads(response_text)
+
+                if "tailored_resume" not in result_data or "cold_email" not in result_data:
+                    raise ValueError("Model response missing required keys.")
+
+                print(f"[ResumeX] Success with model={model_name} on attempt {attempt}")
+                return {
+                    "tailored_resume": result_data["tailored_resume"],
+                    "cold_email": result_data["cold_email"]
+                }
+
+            except json.JSONDecodeError as e:
+                last_error = e
+                print(f"[ResumeX] JSON parse error with {model_name}: {e}")
+                break  # retrying won't help for a parse error — try next model
+
+            except Exception as e:
+                last_error = e
+                error_str = str(e)
+                # Retry on 503 / UNAVAILABLE / rate-limit errors
+                if any(code in error_str for code in ["503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "overloaded"]):
+                    wait = INITIAL_BACKOFF * (2 ** (attempt - 1))  # exponential backoff
+                    print(f"[ResumeX] {model_name} returned transient error, retrying in {wait}s … ({error_str[:120]})")
+                    await asyncio.sleep(wait)
+                    continue
+                else:
+                    # Non-transient error — skip retries for this model
+                    print(f"[ResumeX] Non-transient error with {model_name}: {error_str[:200]}")
+                    break
+
+        # If we exhausted retries for this model, move to the next one
+        print(f"[ResumeX] All {MAX_RETRIES} attempts exhausted for {model_name}, trying next model…")
+
+    # All models failed
+    raise HTTPException(
+        status_code=503,
+        detail=f"All Gemini models are currently unavailable. Please try again in a minute. Last error: {str(last_error)}"
+    )
 
 # For local development
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8006, reload=True)
