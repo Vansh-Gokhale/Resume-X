@@ -16,15 +16,10 @@ load_dotenv()
 app = FastAPI(title="ResumeX API")
 
 # Configure CORS
-origins = [
-    "http://localhost:3000",
-    "http://localhost:3006",
-    os.getenv("FRONTEND_URL", ""),
-]
-
+# Using ["*"] temporarily to diagnose deployment issues
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin for origin in origins if origin],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
