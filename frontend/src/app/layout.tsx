@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Link from "next/link";
 import {
   ClerkProvider,
   SignInButton,
@@ -32,13 +33,30 @@ export default function RootLayout({
       >
         <ClerkProvider>
           <header className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 py-3 bg-[#050505]/80 backdrop-blur-xl border-b border-white/[0.06]">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold text-sm">
-                RX
-              </div>
-              <span className="text-lg font-semibold tracking-tight bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent">
-                ResumeX
-              </span>
+            <div className="flex items-center gap-6">
+              <Link href="/" className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold text-sm">
+                  RX
+                </div>
+                <span className="text-lg font-semibold tracking-tight bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent">
+                  ResumeX
+                </span>
+              </Link>
+
+              <nav className="hidden sm:flex items-center gap-1">
+                <Link
+                  href="/"
+                  className="px-3 py-1.5 text-sm text-neutral-400 hover:text-white transition-colors rounded-lg hover:bg-white/[0.04]"
+                >
+                  Optimize
+                </Link>
+                <Link
+                  href="/jobs"
+                  className="px-3 py-1.5 text-sm text-neutral-400 hover:text-white transition-colors rounded-lg hover:bg-white/[0.04]"
+                >
+                  Find Jobs
+                </Link>
+              </nav>
             </div>
 
             <div className="flex items-center gap-3">

@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText, UploadCloud, Sparkles, Copy, Check, X, Loader2, ArrowRight, Download } from "lucide-react";
+import { AuroraBackground } from "@/components/ui/aurora-background";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -127,11 +128,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-[#050505] relative overflow-hidden flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8">
-      {/* Background Glows */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full point-events-none" />
-      <div className="absolute top-[20%] right-[-10%] w-[40%] h-[40%] bg-purple-500/10 blur-[120px] rounded-full point-events-none" />
-
+    <AuroraBackground className="py-12 px-4 sm:px-6 lg:px-8">
       <motion.div
         className="max-w-5xl w-full z-10 flex flex-col gap-12"
         variants={containerVariants}
@@ -307,6 +304,6 @@ export default function Home() {
           </motion.div>
         )}
       </motion.div>
-    </main>
+    </AuroraBackground>
   );
 }
